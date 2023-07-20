@@ -1,5 +1,5 @@
 from django.forms import model_to_dict
-from rest_framework import generics
+from rest_framework import generics, viewsets
 from django.contrib.auth import logout, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
@@ -9,63 +9,43 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from .forms import *
 from .models import *
+from .permissions import IsOwnerOrReadOnly, IsAdminOrReadOnly
 from .serializers import WorldsSerializer
 from .utils import *
+
+
+# class WorldsViewSet(viewsets.ModelViewSet):
+#     queryset = Worlds.objects.all()
+#     serializer_class = WorldsSerializer
+
 
 class WorldsAPIList(generics.ListCreateAPIView):
     queryset = Worlds.objects.all()
     serializer_class = WorldsSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly, )
 
 
-class WorldsAPIView(APIView):
-    def get(self, request):
-        w = Worlds.objects.all()
-        return Response({'posts': WorldsSerializer(w, many=True).data})
-
-    def post(self, request):
-        serializer = WorldsSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'posts': serializer.data})
-
-    def put(self, request, *args, **kwargs):
-        pk = kwargs.get('pk', None)
-        if not pk:
-            return Response({'error': 'Method PUT not allowed'})
-
-        try:
-            instance = Worlds.objects.get(pk=pk)
-        except:
-            return Response({'error': 'Method PUT not allowed'})
-
-        serializer = WorldsSerializer(data=request.data, instance=instance)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'post': serializer.data})
+class WorldsAPIUpdate(generics.RetrieveUpdateAPIView):
+    queryset = Worlds.objects.all()
+    serializer_class = WorldsSerializer
+    permission_classes = (IsAuthenticated, )
 
 
-    def delete(self, request, *args, **kwargs):
-        pk = kwargs.get('pk', None)
-        if not pk:
-            return Response({"error": "Method Delete not allowed"})
-
-        try:
-            instance = Worlds.objects.get(pk=pk)
-            instance.delete()
-        except:
-            return Response({"error": "Object does not exists"})
-
-        return Response({"post": "delete post" * str(pk)})
+class WorldsAPIDestroy(generics.RetrieveDestroyAPIView):
+    queryset = Worlds.objects.all()
+    serializer_class = WorldsSerializer
+    permission_classes = (IsAdminOrReadOnly, )
 
 
-# class WorldsAPIView(generics.ListAPIView):
-#     queryset = Worlds.objects.all()
-#     serializer_class = WorldsSerializer
+
+
+
 
 
 class WorldsHome(DataMixin, ListView):
